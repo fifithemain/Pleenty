@@ -1,0 +1,3 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+export async function POST(req:Request){const body=await req.json();const key=body.key;if(!process.env.ADMIN_ACCESS_KEY||key!==process.env.ADMIN_ACCESS_KEY)return NextResponse.json({error:'Unauthorized'},{status:401});const orders=await prisma.order.findMany({include:{items:{include:{product:true}}},orderBy:{createdAt:'desc'},take:100});return NextResponse.json({orders:orders.map(o=>({...o,totalAmount:Number(o.totalAmount),subtotal:Number(o.subtotal),deliveryFee:Number(o.deliveryFee),createdAt:o.createdAt.toISOString(),items:o.items.map(i=>({...i,price:Number(i.price)}))}))});}
