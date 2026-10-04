@@ -16,6 +16,7 @@ export async function createProduct(
     slug: string;
     description?: string;
     price: number;
+    comparePrice?: number;
     unit?: string;
     imageUrl?: string;
     stockQty: number;
