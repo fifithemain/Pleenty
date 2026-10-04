@@ -72,7 +72,7 @@ export async function deleteProduct(key: string, id: string) {
 export async function updateOrderStatus(
   key: string,
   id: string,
-  status: 'PENDING' | 'PAID' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED',
+  status: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED',
 ) {
   checkKey(key);
   await prisma.order.update({ where: { id }, data: { status: status.toLowerCase() } });
