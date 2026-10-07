@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { importerAuthorized } from '@/lib/importer-auth';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
+import { importerAuthorized } from '../../../lib/importer-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
