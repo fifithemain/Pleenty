@@ -1,0 +1,1 @@
+export default function PaymentSuccess(){return <main style={{padding:40,fontFamily:'sans-serif'}}><h1>Payment received</h1><p>Thank you. Your FreshCart order has been submitted.</p><a href='/'>Continue shopping</a></main>}
