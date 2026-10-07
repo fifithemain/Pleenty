@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { importerAuthorized } from '@/lib/importer-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -21,6 +22,7 @@ async function uploadImage(supabase:any,dataUrl:string,productSlug:string){
 }
 
 export async function POST(req:Request){
+  if(!importerAuthorized(req)) return NextResponse.json({error:'Importer access is not configured or the access key is invalid.'},{status:401});
   const supabase=getSupabaseAdmin();
   if(!supabase) return NextResponse.json({error:'Supabase is not configured. Add SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) in Vercel.'},{status:500});
   const body=await req.json();
