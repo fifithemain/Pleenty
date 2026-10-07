@@ -42,6 +42,7 @@ Set Root Directory to `specials-importer` and add:
 - `SUPABASE_URL=https://zknldbcttzamqhcptyqz.supabase.co`
 - `SUPABASE_SECRET_KEY` (recommended current Supabase secret key)
 - or legacy `SUPABASE_SERVICE_ROLE_KEY`
+- `IMPORTER_ADMIN_KEY` — a private key required by the internal importer API
 
 Never commit any of these secrets.
 
@@ -51,6 +52,6 @@ A 40% markup is applied to food. Example: R69.00 cost -> R96.60 selling price. T
 
 ## Safety of publishing
 
-The importer does not publish automatically after extraction. You must review the detected products and click **Approve & publish**. Only selected new products are written to the Freshcart catalogue.
+The importer API is protected by `IMPORTER_ADMIN_KEY`, and the UI sends it over HTTPS for extraction/publishing. Keep it private and rotate it if exposed. The importer does not publish automatically after extraction. You must review the detected products and click **Approve & publish**. Only selected new products are written to the Freshcart catalogue.
 
 Never expose `OPENAI_API_KEY` or the Supabase secret/service-role key to the browser.
