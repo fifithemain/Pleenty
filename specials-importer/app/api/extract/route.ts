@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { importerAuthorized } from '@/lib/importer-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -38,6 +39,7 @@ async function getAutomaticFeatured() {
 }
 
 export async function POST(req: Request) {
+  if (!importerAuthorized(req)) return NextResponse.json({ error: 'Importer access is not configured or the access key is invalid.' }, { status: 401 });
   const form = await req.formData();
   const files = form.getAll('files').filter(x => x instanceof File) as File[];
   const manualFeatured = JSON.parse(String(form.get('alreadyFeatured') || '[]'));
