@@ -24,7 +24,7 @@ export async function POST(req:Request){
   const supabase=getSupabaseAdmin();
   if(!supabase) return NextResponse.json({error:'Supabase is not configured. Add SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) in Vercel.'},{status:500});
   const body=await req.json();
-  const retailerName=String(body.retailerName||'').trim()||null;
+  const retailerName=String(body.retailerName||'').trim();
   const weekStart=String(body.weekStart||'').trim();
   const markupPercent=safeNumber(body.markupPercent,40);
   const sourceFiles=Array.isArray(body.sourceFiles)?body.sourceFiles:[];
