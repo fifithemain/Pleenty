@@ -54,6 +54,7 @@ export default function Home(){
   const [skip,setSkip]=useState(true);
   const [featuredText,setFeaturedText]=useState('');
   const [retailerName,setRetailerName]=useState('');
+  const [accessKey,setAccessKey]=useState('');
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
   const [dbConnected,setDbConnected]=useState(false);
@@ -72,7 +73,7 @@ export default function Home(){
       form.append('markup',String(markup));
       form.append('alreadyFeatured',JSON.stringify(already));
       form.append('skipFeatured',String(skip));
-      const r=await fetch('/api/extract',{method:'POST',body:form});
+      const r=await fetch('/api/extract',{method:'POST',headers:{'x-freshcart-importer-key':accessKey},body:form});
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||'Extraction failed');
       const enriched=await Promise.all((data.products||[]).map(async(p:Product)=>{
@@ -95,7 +96,7 @@ export default function Home(){
       if(!weekStart)throw new Error('Run an extraction first.');
       const r=await fetch('/api/publish',{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{'Content-Type':'application/json','x-freshcart-importer-key':accessKey},
         body:JSON.stringify({retailerName,weekStart,markupPercent:markup,sourceFiles:files.map(f=>f.name),products:selected})
       });
       const data=await r.json();
@@ -131,6 +132,7 @@ export default function Home(){
           </div>
           {files.length>0&&<div className="filelist">{files.map((f,i)=><div className="file" key={i}><span>{f.name}</span><button className="button secondary" onClick={()=>remove(i)}>Remove</button></div>)}</div>}
           <div className="settings">
+            <div className="field"><label>Importer access key</label><input type="password" value={accessKey} onChange={e=>setAccessKey(e.target.value)} placeholder="Set IMPORTER_ADMIN_KEY in Vercel"/></div>
             <div className="field"><label>Retailer / store (optional)</label><input value={retailerName} onChange={e=>setRetailerName(e.target.value)} placeholder="e.g. People's Market"/></div>
             <div className="field"><label>Food markup</label><input type="number" min="0" max="200" value={markup} onChange={e=>setMarkup(Number(e.target.value)||0)}/></div>
             <label className="check"><input type="checkbox" checked={skip} onChange={e=>setSkip(e.target.checked)}/> Skip products already featured this week</label>
