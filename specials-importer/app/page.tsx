@@ -138,7 +138,7 @@ export default function Home(){
             <label className="check"><input type="checkbox" checked={skip} onChange={e=>setSkip(e.target.checked)}/> Skip products already featured this week</label>
             <div className="field"><label>Additional already-featured products (optional)</label><textarea value={featuredText} onChange={e=>setFeaturedText(e.target.value)} placeholder={'One product per line, e.g. Carrots\nCoke 2L\nSpekko Rice 10kg'}/></div>
           </div>
-          <button className="button primary" style={{width:'100%'}} disabled={!files.length||busy} onClick={extract}>{busy?'Reading flyers…':'Extract & preview specials'}</button>
+          <button className="button primary" style={{width:'100%'}} disabled={!files.length||!accessKey||busy} onClick={extract}>{busy?'Reading flyers…':'Extract & preview specials'}</button>
           {error&&<div className="error">{error}</div>}{notice&&<div className="notice">{notice}</div>}
         </section>
 
@@ -158,7 +158,7 @@ export default function Home(){
       <section className="preview">
         <div className="previewHeader">
           <div><div className="eyebrow">Preview</div><h2>{items.length?items.length+' products detected':'Your extracted catalogue will appear here'}</h2></div>
-          {items.length>0&&<div style={{display:'flex',gap:8}}><button className="button secondary" onClick={()=>setItems([])}>Clear</button><button className="button primary" disabled={!selectedCount||publishing} onClick={publish}>{publishing?'Publishing…':'Approve & publish '+selectedCount}</button></div>}
+          {items.length>0&&<div style={{display:'flex',gap:8}}><button className="button secondary" onClick={()=>setItems([])}>Clear</button><button className="button primary" disabled={!selectedCount||!accessKey||publishing} onClick={publish}>{publishing?'Publishing…':'Approve & publish '+selectedCount}</button></div>}
         </div>
 
         {items.length===0?<div className="empty">Upload a flyer and click <b>Extract & preview specials</b>. Review costs, selling prices, duplicates and catalogue assignments before publishing.</div>:
