@@ -57,9 +57,8 @@ export async function POST(req: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const b64 = bytes.toString('base64');
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const content:any[] = [{ type:'input_text', text:'You are Freshcart grocery flyer extraction engine. '+instruction+' Existing featured products from Freshcart this week: '+JSON.stringify(already)+' Source filename: '+file.name }];
-    if (isPdf) content.push({ type:'input_file', filename:file.name, file_data:'data:application/pdf;base64,'+b64 });
-    else content.push({ type:'input_image', image_url:'data:'+(file.type||'image/jpeg')+';base64,'+b64, detail:'high' });
+    const promptText = 'You are Freshcart grocery flyer extraction engine. '+instruction+' Existing featured products from Freshcart this week: '+JSON.stringify(already)+' Source filename: '+file.name;\n    const content:any[] = [{ type:'text', text:promptText }];
+    if (isPdf) {\n      content.push({ type:'text', text:'PDF flyers are not supported by the free vision route yet. Please upload the flyer as JPG, PNG, or WEBP.' });\n    } else {\n      content.push({ type:'image_url', image_url:{ url:'data:'+(file.type||'image/jpeg')+';base64,'+b64 } });\n    }
 
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
