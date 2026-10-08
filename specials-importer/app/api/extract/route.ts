@@ -4,11 +4,7 @@ import { importerAuthorized } from '../../../lib/importer-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-const FREE_VISION_MODELS = [
-  'openrouter/free',
-  'google/gemma-4-31b-it:free',
-  'google/gemma-4-26b-a4b-it:free'
-];
+const OPENAI_MODEL = 'gpt-6-luna';
 
 const instruction = 'Return JSON only in this shape: {"products":[{"name":"string","brand":"string or empty","description":"customer-facing description","cost":number,"unit":"string","catalog":"produce|pantry|bakery|dairy|meat|frozen|beverages|household|other","confidence":number,"image_bbox":[x,y,w,h] or null}]}. Coordinates must be normalized 0..1 relative to the source image. If the source is a PDF, image_bbox may be null. Treat the advertised special price as cost. Never invent a price. For bundle offers, put the full offer in name/description and use the advertised total price. Extract only products actually visible on the flyer. Do not decide whether a product is already featured; the server performs that match.';
 
@@ -45,50 +41,76 @@ async function getAutomaticFeatured() {
   return { names: (products || []).map((p:any) => String(p.name || '')).filter(Boolean), connected: true, error: null };
 }
 
-async function extractWithFreeModels(content: any[], fileName: string) {
-  const errors: string[] = [];
-  for (const model of FREE_VISION_MODELS) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization':'Bearer '+process.env.OPENROUTER_API_KEY,
-          'HTTP-Referer':'https://freshuploads.vercel.app',
-          'X-Title':'Freshcart Specials Importer'
-        },
-        body:JSON.stringify({
-          model,
-          messages: [{ role:'user', content }],
-          response_format: { type:'json_object' },
-          max_tokens: 4096
-        })
-      });
+async function extractWithOpenAI(content: any[], fileName: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured.');
 
-      if (r.ok) {
-        const data = await r.json();
-        const raw = data.choices?.[0]?.message?.content || '';
-        try {
-          const parsed = parseOutput(raw);
-          if (Array.isArray(parsed.products)) return parsed;
-          errors.push(model+': response did not contain products[]');
-        } catch (e:any) {
-          errors.push(model+': invalid JSON response');
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      input: [{
+        role: 'user',
+        content: [
+          { type: 'input_text', text: String(content[0]?.text || '') },
+          { type: 'input_image', image_url: String(content[1]?.image_url?.url || ''), detail: 'high' }
+        ]
+      }],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'freshcart_flyer_products',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              products: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    brand: { type: 'string' },
+                    description: { type: 'string' },
+                    cost: { type: 'number' },
+                    unit: { type: 'string' },
+                    catalog: { type: 'string', enum: ['produce','pantry','bakery','dairy','meat','frozen','beverages','household','other'] },
+                    confidence: { type: 'number' },
+                    image_bbox: {
+                      anyOf: [
+                        { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4 },
+                        { type: 'null' }
+                      ]
+                    }
+                  },
+                  required: ['name','brand','description','cost','unit','catalog','confidence','image_bbox'],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ['products'],
+            additionalProperties: false
+          }
         }
-        break;
-      }
+      },
+      max_output_tokens: 4096
+    })
+  });
 
-      const body = await r.text();
-      errors.push(model+': '+r.status+' '+body.slice(0,300));
-      if (r.status !== 429 || attempt === 1) break;
-
-      const retryAfter = Number(r.headers.get('retry-after'));
-      const waitMs = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter * 1000, 1500), 8000) : 2500;
-      await new Promise(resolve => setTimeout(resolve, waitMs));
-    }
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error('OpenAI extraction failed for '+fileName+': '+response.status+' '+body.slice(0,800));
   }
 
-  throw new Error('All free vision models were unavailable for '+fileName+'. '+errors.join(' | '));
+  const data = await response.json();
+  const raw = data.output_text || data.output?.flatMap((x:any) => x.content || []).find((x:any) => x.type === 'output_text')?.text || '';
+  const parsed = parseOutput(raw);
+  if (!Array.isArray(parsed.products)) throw new Error('OpenAI returned an invalid products response for '+fileName+'.');
+  return parsed;
 }
 
 export async function POST(req: Request) {
@@ -99,7 +121,7 @@ export async function POST(req: Request) {
   const markup = Number(form.get('markup') || 40);
   const skip = String(form.get('skipFeatured') || 'true') === 'true';
   if (!files.length) return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
-  if (!process.env.OPENROUTER_API_KEY) return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured. Add it in Vercel Environment Variables.' }, { status: 500 });
+  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY is not configured. Add it in Vercel Environment Variables.' }, { status: 500 });
 
   const automatic = await getAutomaticFeatured();
   if (skip && automatic.error) {
@@ -121,7 +143,7 @@ export async function POST(req: Request) {
 
     let out:any;
     try {
-      out = await extractWithFreeModels(content, file.name);
+      out = await extractWithOpenAI(content, file.name);
     } catch (e:any) {
       return NextResponse.json({ error:'AI extraction failed for '+file.name+': '+String(e.message || e).slice(0,1200) }, {status:503});
     }
