@@ -5,7 +5,7 @@ Standalone Next.js internal tool for turning grocery store flyers into Freshcart
 ## Included workflow
 
 - Upload JPG/PNG/WEBP images and PDFs.
-- AI vision extraction through the OpenAI Responses API.
+- AI vision extraction through OpenRouter, using the free-model router by default.
 - Product name, brand, description, advertised cost, unit and catalogue extraction.
 - Automatic duplicate detection against Freshcart specials already published for the current South African week.
 - Optional manual list of additional already-featured products.
@@ -37,8 +37,8 @@ The importer uses a Supabase secret key only on the server for database writes a
 
 Set Root Directory to `specials-importer` and add:
 
-- `OPENAI_API_KEY`
-- optional `OPENAI_MODEL`
+- `OPENROUTER_API_KEY`
+- optional `OPENROUTER_MODEL` (defaults to `openrouter/free`)
 - `SUPABASE_URL=https://zknldbcttzamqhcptyqz.supabase.co`
 - `SUPABASE_SECRET_KEY` (recommended current Supabase secret key)
 - or legacy `SUPABASE_SERVICE_ROLE_KEY`
@@ -54,4 +54,4 @@ A 40% markup is applied to food. Example: R69.00 cost -> R96.60 selling price. T
 
 The importer API is protected by `IMPORTER_ADMIN_KEY`, and the UI sends it over HTTPS for extraction/publishing. Keep it private and rotate it if exposed. The importer does not publish automatically after extraction. You must review the detected products and click **Approve & publish**. Only selected new products are written to the Freshcart catalogue.
 
-Never expose `OPENAI_API_KEY` or the Supabase secret/service-role key to the browser.
+Never expose `OPENROUTER_API_KEY` or the Supabase secret/service-role key to the browser.
