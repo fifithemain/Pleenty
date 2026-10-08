@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const markup = Number(form.get('markup') || 40);
   const skip = String(form.get('skipFeatured') || 'true') === 'true';
   if (!files.length) return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
-  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY is not configured. Add it in Vercel Environment Variables.' }, { status: 500 });
+  if (!process.env.OPENROUTER_API_KEY) return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured. Add it in Vercel Environment Variables.' }, { status: 500 });
 
   const automatic = await getAutomaticFeatured();
   const already = Array.from(new Set([...manualFeatured.map((x:any)=>String(x)), ...automatic.names]));
@@ -61,10 +61,10 @@ export async function POST(req: Request) {
     if (isPdf) content.push({ type:'input_file', filename:file.name, file_data:'data:application/pdf;base64,'+b64 });
     else content.push({ type:'input_image', image_url:'data:'+(file.type||'image/jpeg')+';base64,'+b64, detail:'high' });
 
-    const r = await fetch('https://api.openai.com/v1/responses', {
+    const r = await fetch('https://openrouter.ai/api/v1/responses', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENAI_API_KEY},
-      body:JSON.stringify({ model:process.env.OPENAI_MODEL||'gpt-6-luna', input:[{role:'user',content}] })
+      body:JSON.stringify({ model:process.env.OPENROUTER_MODEL||'openrouter/free', input:[{role:'user',content}] })
     });
     if (!r.ok) {
       const t = await r.text();
