@@ -59,7 +59,7 @@ export async function POST(req:Request){
       if(!imageUrl&&typeof p.imageData==='string'&&p.imageData.startsWith('data:')) imageUrl=await uploadImage(supabase,p.imageData,slugify(name));
 
       if(product){
-        const {data:updated,error}=await supabase.from('products').update({category_id:categoryId,description:String(p.description||product.description||''),price:sellingPrice,image_url:imageUrl}).eq('id',product.id).select('id,name,slug,image_url').single();
+        const {data:updated,error}=await supabase.from('products').update({category_id:categoryId,description:String(p.description||product.description||''),image_url:imageUrl}).eq('id',product.id).select('id,name,slug,image_url').single();
         if(error||!updated) throw new Error('Could not update product '+name+': '+(error?.message||'unknown error'));
         product=updated;
       } else {
