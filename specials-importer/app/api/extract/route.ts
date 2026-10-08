@@ -61,17 +61,21 @@ export async function POST(req: Request) {
     if (isPdf) content.push({ type:'input_file', filename:file.name, file_data:'data:application/pdf;base64,'+b64 });
     else content.push({ type:'input_image', image_url:'data:'+(file.type||'image/jpeg')+';base64,'+b64, detail:'high' });
 
-    const r = await fetch('https://openrouter.ai/api/v1/responses', {
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENROUTER_API_KEY},
-      body:JSON.stringify({ model:process.env.OPENROUTER_MODEL||'openrouter/free', input:[{role:'user',content}] })
+      body:JSON.stringify({
+        model: process.env.OPENROUTER_MODEL || 'openrouter/free',
+        messages: [{ role:'user', content }],
+        response_format: { type:'json_object' }
+      })
     });
     if (!r.ok) {
       const t = await r.text();
-      return NextResponse.json({ error:'AI extraction failed for '+file.name+': '+t.slice(0,300) }, {status:500});
+      return NextResponse.json({ error:'AI extraction failed for '+file.name+': '+t.slice(0,500) }, {status:500});
     }
     const data = await r.json();
-    const out = parseOutput(data.output_text || '');
+    const out = parseOutput(data.choices?.[0]?.message?.content || '');
     for (const p of out.products || []) {
       const name = String(p.name || '').trim(), cost = Number(p.cost);
       if (!name || !Number.isFinite(cost)) continue;
