@@ -126,9 +126,9 @@ export default function Home(){
       <div className="grid">
         <section className="card">
           <div className={'drop '+(drag?'drag':'')} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);add(e.dataTransfer.files)}}>
-            <div className="uploadIcon">↑</div><h3>Drop flyer images or PDFs here</h3><p>JPG, PNG, WEBP or PDF. Upload several stores/flyers together.</p>
+            <div className="uploadIcon">↑</div><h3>Drop flyer images here</h3><p>JPG, PNG or WEBP. Upload several stores/flyers together.</p>
             <button className="button primary" onClick={()=>document.getElementById('file')?.click()}>Choose files</button>
-            <input id="file" hidden type="file" multiple accept="image/*,.pdf" onChange={e=>e.target.files&&add(e.target.files)}/>
+            <input id="file" hidden type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={e=>e.target.files&&add(e.target.files)}/>
           </div>
           {files.length>0&&<div className="filelist">{files.map((f,i)=><div className="file" key={i}><span>{f.name}</span><button className="button secondary" onClick={()=>remove(i)}>Remove</button></div>)}</div>}
           <div className="settings">
