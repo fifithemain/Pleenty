@@ -61,7 +61,8 @@ export async function POST(req: Request) {
     if (file.size > 8 * 1024 * 1024) return NextResponse.json({ error:'Flyer '+file.name+' is too large. Please upload an image under 8 MB.' }, {status:400});
     const bytes = Buffer.from(await file.arrayBuffer());
     const b64 = bytes.toString('base64');
-    const promptText = 'You are Freshcart grocery flyer extraction engine. '+instruction+' Existing featured products from Freshcart this week: '+JSON.stringify(already)+' Source filename: '+file.name;\n    const content:any[] = [{ type:'text', text:promptText }, { type:'image_url', image_url:{ url:'data:'+(file.type||'image/jpeg')+';base64,'+b64 } }];
+    const promptText = 'You are Freshcart grocery flyer extraction engine. '+instruction+' Existing featured products from Freshcart this week: '+JSON.stringify(already)+' Source filename: '+file.name;
+    const content:any[] = [{ type:'text', text:promptText }, { type:'image_url', image_url:{ url:'data:'+(file.type||'image/jpeg')+';base64,'+b64 } }];
 
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
