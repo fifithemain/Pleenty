@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   for (const file of files) {
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     if (isPdf) return NextResponse.json({ error:'PDF extraction is temporarily disabled. Please upload the flyer as JPG, PNG, or WEBP.' }, {status:400});
-    if (!/^image\\/(jpeg|png|webp)$/i.test(file.type || '')) return NextResponse.json({ error:'Unsupported file type for '+file.name+'. Please use JPG, PNG, or WEBP.' }, {status:400});
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type || '')) return NextResponse.json({ error:'Unsupported file type for '+file.name+'. Please use JPG, PNG, or WEBP.' }, {status:400});
     if (file.size > 8 * 1024 * 1024) return NextResponse.json({ error:'Flyer '+file.name+' is too large. Please upload an image under 8 MB.' }, {status:400});
     const bytes = Buffer.from(await file.arrayBuffer());
     const b64 = bytes.toString('base64');
