@@ -4,7 +4,11 @@ import { importerAuthorized } from '../../../lib/importer-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-const FREE_VISION_MODEL = 'google/gemma-4-26b-a4b-it:free';
+const FREE_VISION_MODELS = [
+  'openrouter/free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free'
+];
 
 const instruction = 'Return JSON only in this shape: {"products":[{"name":"string","brand":"string or empty","description":"customer-facing description","cost":number,"unit":"string","catalog":"produce|pantry|bakery|dairy|meat|frozen|beverages|household|other","confidence":number,"image_bbox":[x,y,w,h] or null}]}. Coordinates must be normalized 0..1 relative to the source image. If the source is a PDF, image_bbox may be null. Treat the advertised special price as cost. Never invent a price. For bundle offers, put the full offer in name/description and use the advertised total price. Extract only products actually visible on the flyer. Do not decide whether a product is already featured; the server performs that match.';
 
@@ -31,12 +35,60 @@ function weekStart() {
 }
 async function getAutomaticFeatured() {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return { names: [] as string[], connected: false };
+  if (!supabase) return { names: [] as string[], connected: false, error: 'Supabase is not configured.' };
   const { data: specials, error } = await supabase.from('product_specials').select('product_id').eq('week_start', weekStart()).eq('status', 'published');
+  if (error) return { names: [] as string[], connected: true, error: error.message };
   const ids = Array.from(new Set((specials || []).map((x:any) => x.product_id).filter(Boolean)));
-  if (error || !ids.length) return { names: [] as string[], connected: true };
-  const { data: products } = await supabase.from('products').select('id,name').in('id', ids);
-  return { names: (products || []).map((p:any) => String(p.name || '')).filter(Boolean), connected: true };
+  if (!ids.length) return { names: [] as string[], connected: true, error: null };
+  const { data: products, error: productError } = await supabase.from('products').select('id,name').in('id', ids);
+  if (productError) return { names: [] as string[], connected: true, error: productError.message };
+  return { names: (products || []).map((p:any) => String(p.name || '')).filter(Boolean), connected: true, error: null };
+}
+
+async function extractWithFreeModels(content: any[], fileName: string) {
+  const errors: string[] = [];
+  for (const model of FREE_VISION_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+process.env.OPENROUTER_API_KEY,
+          'HTTP-Referer':'https://freshuploads.vercel.app',
+          'X-Title':'Freshcart Specials Importer'
+        },
+        body:JSON.stringify({
+          model,
+          messages: [{ role:'user', content }],
+          response_format: { type:'json_object' },
+          max_tokens: 4096
+        })
+      });
+
+      if (r.ok) {
+        const data = await r.json();
+        const raw = data.choices?.[0]?.message?.content || '';
+        try {
+          const parsed = parseOutput(raw);
+          if (Array.isArray(parsed.products)) return parsed;
+          errors.push(model+': response did not contain products[]');
+        } catch (e:any) {
+          errors.push(model+': invalid JSON response');
+        }
+        break;
+      }
+
+      const body = await r.text();
+      errors.push(model+': '+r.status+' '+body.slice(0,300));
+      if (r.status !== 429 || attempt === 1) break;
+
+      const retryAfter = Number(r.headers.get('retry-after'));
+      const waitMs = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter * 1000, 1500), 8000) : 2500;
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+    }
+  }
+
+  throw new Error('All free vision models were unavailable for '+fileName+'. '+errors.join(' | '));
 }
 
 export async function POST(req: Request) {
@@ -50,6 +102,9 @@ export async function POST(req: Request) {
   if (!process.env.OPENROUTER_API_KEY) return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured. Add it in Vercel Environment Variables.' }, { status: 500 });
 
   const automatic = await getAutomaticFeatured();
+  if (skip && automatic.error) {
+    return NextResponse.json({ error:'Could not safely check this week\'s featured products in Supabase: '+automatic.error }, {status:500});
+  }
   const already = Array.from(new Set([...manualFeatured.map((x:any)=>String(x)), ...automatic.names]));
   const products:any[] = [];
   let skippedCount = 0;
@@ -64,22 +119,12 @@ export async function POST(req: Request) {
     const promptText = 'You are Freshcart grocery flyer extraction engine. '+instruction+' Existing featured products from Freshcart this week: '+JSON.stringify(already)+' Source filename: '+file.name;
     const content:any[] = [{ type:'text', text:promptText }, { type:'image_url', image_url:{ url:'data:'+(file.type||'image/jpeg')+';base64,'+b64 } }];
 
-    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENROUTER_API_KEY},
-      body:JSON.stringify({
-        model: FREE_VISION_MODEL,
-        messages: [{ role:'user', content }],
-        response_format: { type:'json_object' },
-        max_tokens: 4096
-      })
-    });
-    if (!r.ok) {
-      const t = await r.text();
-      return NextResponse.json({ error:'AI extraction failed for '+file.name+': '+t.slice(0,500) }, {status:500});
+    let out:any;
+    try {
+      out = await extractWithFreeModels(content, file.name);
+    } catch (e:any) {
+      return NextResponse.json({ error:'AI extraction failed for '+file.name+': '+String(e.message || e).slice(0,1200) }, {status:503});
     }
-    const data = await r.json();
-    const out = parseOutput(data.choices?.[0]?.message?.content || '');
     for (const p of out.products || []) {
       const name = String(p.name || '').trim(), cost = Number(p.cost);
       if (!name || !Number.isFinite(cost)) continue;
