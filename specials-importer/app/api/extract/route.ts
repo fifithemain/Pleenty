@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     const r = await fetch('https://openrouter.ai/api/v1/responses', {
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENAI_API_KEY},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENROUTER_API_KEY},
       body:JSON.stringify({ model:process.env.OPENROUTER_MODEL||'openrouter/free', input:[{role:'user',content}] })
     });
     if (!r.ok) {
