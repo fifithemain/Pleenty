@@ -56,7 +56,8 @@ export async function POST(req:Request){
       const normalized=norm(name);
       let product=existing.find((x:any)=>norm(String(x.name||''))===normalized);
       let imageUrl=product?.image_url||null;
-      if(!imageUrl&&typeof p.imageData==='string'&&p.imageData.startsWith('data:')) imageUrl=await uploadImage(supabase,p.imageData,slugify(name));
+      // Prefer the tight product-only crop from this flyer over any older image.
+      if(typeof p.imageData==='string'&&p.imageData.startsWith('data:')) imageUrl=await uploadImage(supabase,p.imageData,slugify(name));
 
       if(product){
         const {data:updated,error}=await supabase.from('products').update({category_id:categoryId,description:String(p.description||product.description||''),image_url:imageUrl}).eq('id',product.id).select('id,name,slug,image_url').single();
