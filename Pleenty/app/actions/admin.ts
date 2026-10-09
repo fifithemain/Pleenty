@@ -31,7 +31,7 @@ export async function getAdminDashboardData(key: string) {
       customerPhone: o.customerPhone, deliveryAddress: typeof o.deliveryAddress === 'object' && o.deliveryAddress !== null
         ? Object.values(o.deliveryAddress).filter((v): v is string => typeof v === 'string').join(', ')
         : String(o.deliveryAddress),
-      totalAmount: Number(o.totalAmount), status: o.status.toUpperCase(), createdAt: o.createdAt.toISOString(),
+      totalAmount: Number(o.totalAmount), status: o.status.toUpperCase(), paymentStatus: o.paymentStatus.toUpperCase(), createdAt: o.createdAt.toISOString(),
       items: o.items.map(i => ({ quantity: i.quantity, price: Number(i.price), name: i.productName })),
     })),
   };
