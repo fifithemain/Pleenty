@@ -161,7 +161,7 @@ export default function Admin() {
         if (!response.ok) throw new Error(data.error || 'Could not upload ' + file.name + '.');
         uploaded.push(data.url as string);
       }
-      setMusicTracks(current => [...current.split(/\\r?\\n/).map(t => t.trim()).filter(Boolean), ...uploaded].join('\n'));
+      setMusicTracks(current => [...current.split(String.fromCharCode(10)).map(t => t.trim()).filter(Boolean), ...uploaded].join(String.fromCharCode(10)));
       setMusicEnabled(true);
       setMessage(uploaded.length + ' song(s) uploaded. Click Save music settings to publish the playlist.');
     } catch (e: any) { setError(e?.message || 'Music upload failed.'); }
@@ -173,7 +173,7 @@ export default function Admin() {
     try {
       const tracks = musicTracks.split(/\r?\n/).map(track => track.trim()).filter(Boolean);
       const result = await saveMusicSettings(key, tracks, musicEnabled);
-      setMusicTracks(result.tracks.join('\\n')); setMusicEnabled(result.enabled);
+      setMusicTracks(result.tracks.join(String.fromCharCode(10))); setMusicEnabled(result.enabled);
       setMessage(result.enabled ? 'Storefront music saved and enabled.' : 'Music settings saved. Storefront playback is disabled.');
     } catch (e: any) { setError(e?.message || 'Could not save music settings.'); }
     finally { setBusy(false); }
