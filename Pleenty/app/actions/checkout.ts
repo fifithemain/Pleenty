@@ -79,7 +79,7 @@ export async function createCheckoutOrder(input: CheckoutInput, accessToken?: st
       redirectUrl: checkout.redirectUrl,
     };
   } catch (error) {
-    await prisma.order.update({ where: { id: order.id }, data: { status: 'payment_failed', paymentStatus: 'payment_failed' } }).catch(() => undefined);
+    await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'payment_failed' } }).catch(() => undefined);
     console.error('FreshCart could not start Yoco checkout:', error);
     return { success: false as const, error: 'Your order could not be sent to the secure payment page. No payment has been confirmed. Please try again or contact FreshCart.' };
   }
