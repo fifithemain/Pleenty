@@ -32,12 +32,23 @@ export async function createCheckoutOrder(input: CheckoutInput) {
     return { success: false as const, error: 'One or more products are no longer available. Please refresh your basket.' };
   }
 
+  const unavailableProduct = productSlugs
+    .map((slug) => ({
+      product: products.find((candidate) => candidate.slug === slug)!,
+      quantity: quantities.get(slug)!,
+    }))
+    .find(({ product, quantity }) => !product.inStock || product.stockQty < quantity);
+
+  if (unavailableProduct) {
+    return {
+      success: false as const,
+      error: `${unavailableProduct.product.name} is currently out of stock or there is not enough stock available. Please remove it or reduce the quantity in your basket.`,
+    };
+  }
+
   const lines = productSlugs.map((slug) => {
     const product = products.find((candidate) => candidate.slug === slug)!;
     const quantity = quantities.get(slug)!;
-    if (!product.inStock || product.stockQty < quantity) {
-      throw new Error(`${product.name} is out of stock or has insufficient stock.`);
-    }
     const price = Number(product.price);
     return { productId: product.id, productName: product.name, quantity, price, lineTotal: price * quantity };
   });
