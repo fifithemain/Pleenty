@@ -134,3 +134,18 @@
 .music-player-label{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--green)}.music-track-label{font-size:10px;color:var(--muted);margin-left:auto}.store-music-player audio{width:100%;height:34px}.store-music-player button{border:0;background:#eaf3e7;color:var(--deep);padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700}
 .admin-checkbox-label{display:flex!important;align-items:center;gap:10px!important}.admin-checkbox-label input{width:16px;height:16px}.admin-music-preview{margin-top:18px;padding:14px;border-radius:10px;background:#f7f8f4}.admin-music-preview p{font-size:12px;color:var(--muted);margin-bottom:0}
 @media(max-width:680px){.account-link{padding:9px 10px}.account-dashboard-header{align-items:flex-start;flex-direction:column}.account-dashboard-header>div:last-child{width:100%;justify-content:space-between}.account-summary-grid{gap:8px}.account-summary-grid>div{padding:13px}.account-summary-grid strong{font-size:24px}.account-order-card{padding:15px}.account-status-row{display:grid}.store-music-player{bottom:8px;right:8px}.header-actions{gap:8px}}
+
+
+/* Checkout account gate and uploaded music controls */
+.checkout-account-gate{display:grid;gap:12px}
+.checkout-account-intro{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.checkout-account-gate .account-mode{margin:4px 0}
+.checkout-account-gate .checkout-form{margin-top:0}
+.checkout-account-signed{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:9px;background:#edf7e9;color:#245d38;font-size:12px;font-weight:700;margin-bottom:12px}
+.checkout-account-signed button{border:0;background:transparent;color:var(--green);text-decoration:underline;font-weight:700;cursor:pointer}
+.checkout-account-gate .account-error{margin:0}
+.store-music-player{gap:8px}
+.music-player-heading{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.music-enable-button{border:0;background:var(--green)!important;color:white!important;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:800;cursor:pointer}
+.store-music-player>button:not(.music-enable-button){border:0;background:#eaf3e7;color:var(--deep);padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700}
+.store-music-player input[type="file"]{display:block;width:100%;padding:12px;background:#f8faf6;border:1px dashed #cbd8c7;border-radius:10px}
