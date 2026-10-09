@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function MusicPlayer() {
+  const pathname = usePathname();
   const [tracks, setTracks] = useState<string[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [index, setIndex] = useState(0);
@@ -16,7 +18,7 @@ export default function MusicPlayer() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
-  if (!enabled || !tracks.length) return null;
+  if (pathname.startsWith('/admin') || !enabled || !tracks.length) return null;
   const next = () => setIndex(current => (current + 1) % tracks.length);
   return <aside className="store-music-player" aria-label="FreshCart store music">
     <span className="music-player-label">♫ FRESHCART RADIO</span>
