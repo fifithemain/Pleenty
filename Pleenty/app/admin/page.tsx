@@ -35,7 +35,7 @@ export default function Admin() {
   const [editingCategoryDescription, setEditingCategoryDescription] = useState('');
   const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', imageUrl: '', stockQty: '10', categoryId: '' });
 
-  const load = useCallback(async (adminKey = key) => {
+  const load = useCallback(async (adminKey: string) => {
     if (!adminKey) return;
     setBusy(true);
     setError('');
@@ -56,7 +56,7 @@ export default function Admin() {
     } finally {
       setBusy(false);
     }
-  }, [key]);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('freshcart-admin-key');
