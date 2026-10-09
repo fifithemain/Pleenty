@@ -51,6 +51,8 @@ model Order {
   currency        String      @default("ZAR") @db.Char(3)
   customerName    String      @map("recipient_name")
   customerPhone   String      @map("phone")
+  customerEmail   String?     @map("customer_email")
+  yocoCheckoutId  String?     @unique @map("yoco_checkout_id")
   deliveryAddress Json        @map("delivery_address")
   deliveryNotes   String?     @map("notes")
   createdAt       DateTime    @default(now()) @map("created_at")
@@ -73,4 +75,12 @@ model OrderItem {
   createdAt   DateTime  @default(now()) @map("created_at")
 
   @@map("order_items")
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }
