@@ -95,3 +95,42 @@
 .category-edit-fields>div{display:flex;gap:8px}
 @media(max-width:900px){.admin-product-card{grid-template-columns:minmax(150px,1fr) minmax(130px,.8fr);}.admin-product-card>.danger-admin-button{justify-self:start}.admin-nav{top:82px}}
 @media(max-width:620px){.admin-header{padding:17px 4%;}.admin-header b{font-size:18px}.admin-header span{font-size:10px}.admin-nav{position:static;padding:12px 4%;gap:6px}.admin-nav button{padding:9px 10px;font-size:10px}.admin-nav .admin-refresh{margin-left:0}.admin-dashboard-content{padding:17px 4% 40px}.admin-dashboard-content .panel{padding:16px}.admin-dashboard-content .admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-dashboard-content .stat{padding:14px}.admin-dashboard-content .stat b{font-size:22px}.admin-product-card{grid-template-columns:1fr 1fr;gap:11px}.admin-product-details{grid-column:1/-1}.admin-product-card>.danger-admin-button{justify-self:start}.admin-filters input,.admin-filters select{min-width:100%}.admin-table{min-width:900px}.category-admin-row{align-items:flex-start;flex-direction:column}.category-row-actions{align-self:flex-start}.admin-quick-links button{width:100%;text-align:left}}
+
+
+/* Customer accounts, payment outcomes and storefront music */
+.account-link{display:inline-flex;align-items:center;justify-content:center;border:1px solid #e5e9e2;border-radius:11px;padding:11px 13px;color:var(--deep);font-size:12px;font-weight:700;white-space:nowrap}
+.account-shell{width:min(980px,calc(100% - 32px));margin:42px auto 90px;color:var(--ink)}
+.account-back{color:var(--green);font-weight:700;font-size:13px;display:inline-flex;margin-bottom:22px}
+.account-auth-card{width:min(480px,100%);margin:22px auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:clamp(24px,5vw,42px);box-shadow:0 18px 60px rgba(23,61,42,.06)}
+.account-kicker{font-size:10px;letter-spacing:1.4px;font-weight:800;color:var(--green)}
+.account-auth-card h1,.account-dashboard-header h1{font-family:Manrope,sans-serif;font-size:clamp(30px,5vw,43px);line-height:1.12;letter-spacing:-1.6px;margin:12px 0}
+.account-auth-card>p,.account-dashboard-header p,.account-orders-heading p{color:var(--muted);line-height:1.7}
+.account-mode{display:grid;grid-template-columns:1fr 1fr;background:#f5f7f2;border-radius:10px;padding:4px;margin:24px 0}
+.account-mode button{border:0;background:transparent;border-radius:8px;padding:11px;color:#68766b;font-weight:700}
+.account-mode button.active{background:#fff;color:var(--green);box-shadow:0 2px 8px #1d30230c}
+.account-form{display:grid;gap:15px}
+.account-form label{display:grid;gap:7px;font-weight:700;font-size:12px}
+.account-form input{border:1px solid #dfe5dc;border-radius:9px;padding:12px;background:#fff;min-width:0}
+.account-primary{border:0;border-radius:10px;background:var(--green);color:#fff;padding:13px 16px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.account-primary:disabled{opacity:.6}
+.account-auth-card .account-primary{width:100%;margin-top:3px}
+.account-auth-card>small{display:block;color:var(--muted);line-height:1.6;margin-top:20px}
+.account-message,.account-error{border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.6}
+.account-message{background:#eef7ed;color:#225b39}.account-error{background:#fff0ed;color:#a23c2b}
+.account-dashboard-header{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0}
+.account-dashboard-header>div:last-child{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.account-signout,.account-orders-heading>button{border:1px solid var(--line);background:white;border-radius:9px;padding:10px 13px;font-weight:700;color:var(--deep)}
+.account-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 34px}
+.account-summary-grid>div{border:1px solid var(--line);border-radius:15px;padding:20px;background:#fbfcf9}
+.account-summary-grid small{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}.account-summary-grid strong{font:800 30px Manrope,sans-serif;color:var(--deep)}
+.account-orders{display:grid;gap:14px}.account-orders-heading{display:flex;justify-content:space-between;align-items:center;gap:16px}.account-orders-heading h2{font:800 24px Manrope,sans-serif;margin:0}.account-order-card{border:1px solid var(--line);border-radius:16px;padding:20px;background:#fff}
+.account-order-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.account-order-top>div{display:grid;gap:5px}.account-order-top small{font-size:11px;color:var(--muted)}.account-order-top>strong{font:800 18px Manrope,sans-serif}
+.account-status-row{display:flex;gap:12px;flex-wrap:wrap;margin:17px 0}.account-status-row>span{font-size:12px;display:flex;align-items:center;gap:5px}.account-status{display:inline-flex;border-radius:99px;padding:5px 8px;background:#f0f2ee;color:#556257;font-size:10px}
+.account-status.status-paid,.account-status.status-delivered,.account-status.status-confirmed{background:#e7f5e6;color:#23623c}.account-status.status-unpaid,.account-status.status-pending,.account-status.status-payment_failed{background:#fff3dc;color:#94601a}.account-status.status-cancelled,.account-status.status-failed{background:#ffebe7;color:#a23c2b}
+.account-address{font-size:12px;color:var(--muted);line-height:1.6}.account-order-card ul{list-style:none;margin:14px 0 0;padding:0;border-top:1px solid var(--line)}.account-order-card li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #f1f2ee;font-size:12px}.account-payment-note{color:#8b5a12;background:#fff8e8;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6}
+.account-empty{text-align:center;border:1px dashed #dce4d8;border-radius:16px;padding:40px 18px}.account-empty>span{font-size:36px}.account-empty h2{font-family:Manrope,sans-serif}.account-empty p{color:var(--muted);line-height:1.7}
+.payment-result{min-height:75vh;background:var(--cream);display:grid;place-items:center;padding:24px}.payment-result-card{width:min(560px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:clamp(24px,5vw,42px);display:grid;gap:14px;box-shadow:0 18px 60px rgba(23,61,42,.05)}.payment-result-card>span{font-size:10px;letter-spacing:1.4px;font-weight:800;color:var(--green)}.payment-result-card h1{font:800 clamp(30px,5vw,42px)/1.12 Manrope,sans-serif;letter-spacing:-1.5px;margin:0}.payment-result-card p{line-height:1.75;color:var(--muted);margin:0}.payment-result-card a,.payment-result-card button{border:0;background:var(--green);color:#fff;padding:12px 15px;border-radius:9px;font-weight:700;text-align:center}.payment-result-card a:last-child{background:#f3f6f0;color:var(--deep)}
+.store-music-player{position:fixed;z-index:30;bottom:14px;right:14px;width:min(360px,calc(100vw - 28px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 12px;border:1px solid #dfe7dc;border-radius:14px;background:rgba(255,255,255,.97);box-shadow:0 8px 30px rgba(23,61,42,.13);backdrop-filter:blur(12px)}
+.music-player-label{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--green)}.music-track-label{font-size:10px;color:var(--muted);margin-left:auto}.store-music-player audio{width:100%;height:34px}.store-music-player button{border:0;background:#eaf3e7;color:var(--deep);padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700}
+.admin-checkbox-label{display:flex!important;align-items:center;gap:10px!important}.admin-checkbox-label input{width:16px;height:16px}.admin-music-preview{margin-top:18px;padding:14px;border-radius:10px;background:#f7f8f4}.admin-music-preview p{font-size:12px;color:var(--muted);margin-bottom:0}
+@media(max-width:680px){.account-link{padding:9px 10px}.account-dashboard-header{align-items:flex-start;flex-direction:column}.account-dashboard-header>div:last-child{width:100%;justify-content:space-between}.account-summary-grid{gap:8px}.account-summary-grid>div{padding:13px}.account-summary-grid strong{font-size:24px}.account-order-card{padding:15px}.account-status-row{display:grid}.store-music-player{bottom:8px;right:8px}.header-actions{gap:8px}}
