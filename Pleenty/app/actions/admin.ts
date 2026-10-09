@@ -59,6 +59,7 @@ export async function updateProduct(
   checkKey(key);
   const data = { ...input } as typeof input & { stockQty?: number; inStock?: boolean };
   if (data.stockQty !== undefined) data.inStock = data.stockQty > 0;
+  if (data.categoryId === '') data.categoryId = null;
   await prisma.product.update({ where: { id }, data });
   revalidatePath('/admin'); revalidatePath('/');
 }
