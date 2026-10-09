@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/prisma';
 
 export const revalidate = 60;
 
@@ -21,10 +22,15 @@ export async function GET() {
     return NextResponse.json({ products: [], source: 'demo', error: 'Published specials could not be loaded.' }, { status: 200 });
   }
 
-  return NextResponse.json({
-    products: (data || []).map((p: any) => ({
-      id: String(p.product_id || p.id),
-      slug: String(p.slug || p.product_id || p.id),
+  const inventory = await prisma.product.findMany({ select: { id: true, slug: true, stockQty: true, inStock: true } });
+  const products = (data || []).map((p: any) => {
+    const productId = String(p.product_id || '');
+    const slug = String(p.slug || p.product_id || p.id);
+    const stock = inventory.find((item) => item.id === productId || item.slug === slug);
+    const stockQty = stock?.stockQty ?? 0;
+    return {
+      id: productId || String(p.id),
+      slug,
       name: String(p.name || ''),
       unit: String(p.unit || 'each'),
       price: Number(p.special_price || 0),
@@ -34,9 +40,12 @@ export async function GET() {
       desc: String(p.description || 'Fresh-picked value for your everyday shop.'),
       imageUrl: cleanProductImage(p.image_url),
       isSpecial: true,
-    })).filter((p: any) => p.name && Number.isFinite(p.price)),
-    source: 'supabase',
-  });
+      stockQty,
+      inStock: Boolean(stock?.inStock) && stockQty > 0,
+    };
+  }).filter((p: any) => p.name && Number.isFinite(p.price));
+
+  return NextResponse.json({ products, source: 'supabase' }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 function categoryLabel(catalog: string) {
