@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const orderId = request.nextUrl.searchParams.get('order');
-  if (!orderId) return NextResponse.json({ error: 'Missing order reference.' }, { status: 400 });
+  if (!orderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) return NextResponse.json({ error: 'Invalid order reference.' }, { status: 400 });
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
   if (['paid', 'succeeded', 'completed'].includes(order.paymentStatus.toLowerCase())) {
