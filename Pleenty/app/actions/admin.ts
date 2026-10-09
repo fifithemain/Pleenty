@@ -11,10 +11,11 @@ function checkKey(key: string) {
 
 export async function getAdminDashboardData(key: string) {
   checkKey(key);
-  const [products, categories, orders] = await Promise.all([
+  const [products, categories, orders, musicSetting] = await Promise.all([
     prisma.product.findMany({ include: { category: true }, orderBy: { name: 'asc' } }),
     prisma.category.findMany({ orderBy: { name: 'asc' } }),
     prisma.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 250 }),
+    prisma.appSetting.findUnique({ where: { key: 'storefront_music' } }),
   ]);
   return {
     products: products.map(p => ({
@@ -24,6 +25,7 @@ export async function getAdminDashboardData(key: string) {
       categoryName: p.category?.name || 'Uncategorized',
     })),
     categories: categories.map(c => ({ id: c.id, name: c.name, slug: c.slug, description: c.description || '', isActive: c.isActive })),
+    music: (musicSetting?.value as { enabled?: boolean; tracks?: string[] } | null) || { enabled: false, tracks: [] },
     orders: orders.map(o => ({
       id: o.id, orderNumber: o.id.slice(0, 8).toUpperCase(), customerName: o.customerName,
       customerPhone: o.customerPhone, deliveryAddress: typeof o.deliveryAddress === 'object' && o.deliveryAddress !== null
@@ -105,4 +107,24 @@ export async function updateOrderStatus(
   checkKey(key);
   await prisma.order.update({ where: { id }, data: { status: status.toLowerCase() } });
   revalidatePath('/admin'); revalidatePath('/');
+}
+
+export async function saveMusicSettings(key: string, tracks: string[], enabled: boolean) {
+  checkKey(key);
+  const cleanTracks = tracks.map(track => track.trim()).filter(Boolean);
+  if (cleanTracks.length > 30) throw new Error('Please add no more than 30 songs.');
+  for (const track of cleanTracks) {
+    let url: URL;
+    try { url = new URL(track); } catch { throw new Error('Each song must be a valid HTTPS audio URL.'); }
+    if (url.protocol !== 'https:') throw new Error('Each song must use HTTPS.');
+  }
+  const value = { enabled: Boolean(enabled) && cleanTracks.length > 0, tracks: cleanTracks };
+  await prisma.appSetting.upsert({
+    where: { key: 'storefront_music' },
+    create: { key: 'storefront_music', value },
+    update: { value },
+  });
+  revalidatePath('/');
+  revalidatePath('/admin');
+  return value;
 }
