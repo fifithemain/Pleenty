@@ -36,6 +36,7 @@ export default function Admin() {
   const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', imageUrl: '', stockQty: '10', categoryId: '' });
   const [musicTracks, setMusicTracks] = useState('');
   const [musicEnabled, setMusicEnabled] = useState(false);
+  const [uploadingMusic, setUploadingMusic] = useState(false);
 
   const load = useCallback(async (adminKey: string) => {
     if (!adminKey) return;
@@ -145,6 +146,28 @@ export default function Admin() {
     finally { setBusy(false); }
   };
 
+  const uploadMusicFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploadingMusic(true); setError(''); setMessage('');
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/api/admin/music-upload', {
+          method: 'POST', headers: { 'x-admin-key': key }, body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not upload ' + file.name + '.');
+        uploaded.push(data.url as string);
+      }
+      setMusicTracks(current => [...current.split(/\\r?\\n/).map(t => t.trim()).filter(Boolean), ...uploaded].join('\n'));
+      setMusicEnabled(true);
+      setMessage(uploaded.length + ' song(s) uploaded. Click Save music settings to publish the playlist.');
+    } catch (e: any) { setError(e?.message || 'Music upload failed.'); }
+    finally { setUploadingMusic(false); }
+  };
+
   const saveMusic = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(''); setMessage('');
     try {
@@ -205,7 +228,7 @@ export default function Admin() {
         <div className="panel"><h2>Shop categories</h2><p className="panel-intro">Rename categories or see how many products are assigned to each one.</p>{categories.map(c => <div className="category-admin-row" key={c.id}>{editingCategory === c.id ? <div className="category-edit-fields"><input aria-label="Category name" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} placeholder="Category name"/><input aria-label="Category description" value={editingCategoryDescription} onChange={e => setEditingCategoryDescription(e.target.value)} placeholder="Description (optional)"/><div><button disabled={busy} onClick={() => void saveCategory(c.id)}>Save</button><button className="secondary-admin-button" onClick={() => setEditingCategory(null)}>Cancel</button></div></div> : <><div><b>{c.name}</b><small>/{c.slug} · {products.filter(p => p.categoryId === c.id).length} products</small>{c.description && <p>{c.description}</p>}</div><div className="category-row-actions"><button className="secondary-admin-button" onClick={() => { setEditingCategory(c.id); setEditingCategoryName(c.name); setEditingCategoryDescription(c.description); }}>Edit</button><button className="danger-admin-button" disabled={busy || products.some(p => p.categoryId === c.id)} title={products.some(p => p.categoryId === c.id) ? 'Move products out of this category first' : 'Delete category'} onClick={async () => { if (!window.confirm('Delete category ' + c.name + '?')) return; setBusy(true); try { await deleteCategory(key, c.id); setMessage('Category deleted.'); await load(key); } catch (e: any) { setError(e?.message || 'Could not delete category.'); } finally { setBusy(false); } }}>Delete</button></div></>}</div>)}</div>
       </section>}
 
-      {tab === 'music' && <section className="admin-dashboard-content"><div className="panel"><h2>Storefront music</h2><p className="panel-intro">Add direct HTTPS links to audio files (such as MP3 or OGG), one URL per line. Most streaming-page URLs are not direct audio files. Browsers may block sound autoplay until the visitor presses Play.</p><form className="admin-form" onSubmit={saveMusic}><label>Song URLs<textarea rows={8} placeholder="https://your-domain.com/music/song-one.mp3&#10;https://your-domain.com/music/song-two.mp3" value={musicTracks} onChange={e => setMusicTracks(e.target.value)}/><small>Up to 30 songs. Use audio files you own or are licensed to play.</small></label><label className="admin-checkbox-label"><input type="checkbox" checked={musicEnabled} onChange={e => setMusicEnabled(e.target.checked)}/> Enable music on the storefront</label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save music settings'}</button></form><div className="admin-music-preview"><b>Current playlist</b><p>{musicTracks.split(/\r?\n/).filter(line => line.trim()).length} track(s) · {musicEnabled ? 'Enabled' : 'Disabled'}</p></div></div></section>}
+      {tab === 'music' && <section className="admin-dashboard-content"><div className="panel"><h2>Storefront music</h2><p className="panel-intro">Add direct HTTPS links to audio files (such as MP3 or OGG), one URL per line. Most streaming-page URLs are not direct audio files. Browsers may block sound autoplay until the visitor presses Play.</p><form className="admin-form" onSubmit={saveMusic}><label>Upload song files<input type="file" accept="audio/*,.mp3,.ogg,.wav,.m4a,.aac,.webm" multiple disabled={uploadingMusic || busy} onChange={e => { void uploadMusicFiles(e.currentTarget.files); e.currentTarget.value = ''; }}/><small>Choose MP3, OGG, WAV, M4A, AAC or WEBM files. Maximum 15 MB per song. Uploaded songs are stored in FreshCart’s music library.</small></label><label>Or add direct song URLs<textarea rows={5} placeholder="https://your-domain.com/music/song-one.mp3&#10;https://your-domain.com/music/song-two.mp3" value={musicTracks} onChange={e => setMusicTracks(e.target.value)}/><small>Up to 30 songs total. Use audio files you own or are licensed to play.</small></label>{uploadingMusic && <p className="admin-message">Uploading songs… please keep this page open.</p>}<label className="admin-checkbox-label"><input type="checkbox" checked={musicEnabled} onChange={e => setMusicEnabled(e.target.checked)}/> Enable music on the storefront</label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save music settings'}</button></form><div className="admin-music-preview"><b>Current playlist</b><p>{musicTracks.split(/\r?\n/).filter(line => line.trim()).length} track(s) · {musicEnabled ? 'Enabled' : 'Disabled'}</p></div></div></section>}
 
       {(tab === 'orders' || tab === 'cancelled') && <section className="admin-dashboard-content"><div className="panel"><div className="admin-panel-heading"><div><h2>{tab === 'cancelled' ? 'Cancelled orders' : 'Order management'}</h2><p className="panel-intro">{tab === 'cancelled' ? 'A dedicated record of cancelled orders. You can restore an order by changing its status.' : 'Review customer details, delivery addresses, items and update each order status.'}</p></div><button className="secondary-admin-button" disabled={busy} onClick={() => void load(key)}>Refresh</button></div><div className="admin-filters"><input aria-label="Search orders" placeholder="Search order number, customer, phone…" value={orderSearch} onChange={e => setOrderSearch(e.target.value)}/>{tab === 'orders' && <select aria-label="Filter order status" value={orderStatus} onChange={e => setOrderStatus(e.target.value)}><option value="ALL">All statuses</option>{orderStatuses.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select>}</div>{tab === 'cancelled' ? orderList(filteredOrders.filter(o => o.status === 'CANCELLED')) : orderList(filteredOrders)}</div></section>}
     </>}
