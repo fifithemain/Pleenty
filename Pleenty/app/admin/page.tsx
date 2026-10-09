@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createCategory, createProduct, deleteCategory, deleteProduct, getAdminDashboardData,
-  renameCategory, updateOrderStatus, updateProduct,
+  renameCategory, updateOrderStatus, updateProduct, saveMusicSettings,
 } from '../actions/admin';
 
 type Category = { id: string; name: string; slug: string; description: string; isActive: boolean };
 type Product = { id: string; name: string; slug: string; description: string; price: number; imageUrl: string; stockQty: number; inStock: boolean; categoryId: string; categoryName: string };
 type OrderItem = { quantity: number; price: number; name: string };
 type Order = { id: string; orderNumber: string; customerName: string; customerPhone: string; deliveryAddress: string; totalAmount: number; status: string; createdAt: string; items: OrderItem[] };
-type Tab = 'overview' | 'products' | 'categories' | 'orders' | 'cancelled';
+type Tab = 'overview' | 'products' | 'categories' | 'music' | 'orders' | 'cancelled';
 const money = (n: number) => new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n);
 const orderStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'] as const;
 
@@ -34,6 +34,8 @@ export default function Admin() {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [editingCategoryDescription, setEditingCategoryDescription] = useState('');
   const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', imageUrl: '', stockQty: '10', categoryId: '' });
+  const [musicTracks, setMusicTracks] = useState('');
+  const [musicEnabled, setMusicEnabled] = useState(false);
 
   const load = useCallback(async (adminKey: string) => {
     if (!adminKey) return;
@@ -44,6 +46,8 @@ export default function Admin() {
       setProducts(data.products as Product[]);
       setCategories(data.categories as Category[]);
       setOrders(data.orders as Order[]);
+      setMusicTracks(Array.isArray(data.music?.tracks) ? data.music.tracks.join('\n') : '');
+      setMusicEnabled(Boolean(data.music?.enabled));
       setUnlocked(true);
       setKey(adminKey);
       if (typeof window !== 'undefined') localStorage.setItem('freshcart-admin-key', adminKey);
@@ -141,6 +145,17 @@ export default function Admin() {
     finally { setBusy(false); }
   };
 
+  const saveMusic = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); setError(''); setMessage('');
+    try {
+      const tracks = musicTracks.split(/\\r?\\n/).map(track => track.trim()).filter(Boolean);
+      const result = await saveMusicSettings(key, tracks, musicEnabled);
+      setMusicTracks(result.tracks.join('\\n')); setMusicEnabled(result.enabled);
+      setMessage(result.enabled ? 'Storefront music saved and enabled.' : 'Music settings saved. Storefront playback is disabled.');
+    } catch (e: any) { setError(e?.message || 'Could not save music settings.'); }
+    finally { setBusy(false); }
+  };
+
   const orderList = (source: Order[]) => source.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Order</th><th>Customer & delivery</th><th>Items</th><th>Total</th><th>Status</th><th>Update status</th></tr></thead><tbody>{source.map(o => <tr key={o.id}><td><b>{o.orderNumber}</b><small>{new Date(o.createdAt).toLocaleString('en-ZA')}</small></td><td><b>{o.customerName}</b><small>{o.customerPhone}</small><small>{o.deliveryAddress}</small></td><td>{o.items.map(i => i.quantity + ' × ' + i.name).join(', ') || 'No item details'}</td><td><b>{money(o.totalAmount)}</b></td><td><span className={'order-status status-' + o.status.toLowerCase()}>{o.status.replaceAll('_', ' ')}</span></td><td><select aria-label={'Status for order ' + o.orderNumber} value={o.status} disabled={busy} onChange={e => void changeOrderStatus(o, e.target.value)}>{orderStatuses.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></td></tr>)}</tbody></table></div> : <div className="admin-empty"><b>{tab === 'cancelled' ? 'No cancelled orders' : 'No orders found'}</b><p>{tab === 'cancelled' ? 'Orders you cancel will be listed here for easy reference.' : 'New customer orders will appear here.'}</p></div>;
 
   return <main className="admin-shell">
@@ -189,6 +204,8 @@ export default function Admin() {
         <div className="panel"><h2>Create a category</h2><p className="panel-intro">Categories organise the live shop, for example Produce, Pantry, Dairy or Household.</p><form className="admin-form" onSubmit={addCategory}><label>Category name<input required placeholder="e.g. Fruit & Vegetables" value={categoryName} onChange={e => setCategoryName(e.target.value)}/></label><label>Description (optional)<textarea placeholder="What belongs in this category?" value={categoryDescription} onChange={e => setCategoryDescription(e.target.value)}/></label><button disabled={busy} type="submit">{busy ? 'Saving…' : 'Create category'}</button></form></div>
         <div className="panel"><h2>Shop categories</h2><p className="panel-intro">Rename categories or see how many products are assigned to each one.</p>{categories.map(c => <div className="category-admin-row" key={c.id}>{editingCategory === c.id ? <div className="category-edit-fields"><input aria-label="Category name" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} placeholder="Category name"/><input aria-label="Category description" value={editingCategoryDescription} onChange={e => setEditingCategoryDescription(e.target.value)} placeholder="Description (optional)"/><div><button disabled={busy} onClick={() => void saveCategory(c.id)}>Save</button><button className="secondary-admin-button" onClick={() => setEditingCategory(null)}>Cancel</button></div></div> : <><div><b>{c.name}</b><small>/{c.slug} · {products.filter(p => p.categoryId === c.id).length} products</small>{c.description && <p>{c.description}</p>}</div><div className="category-row-actions"><button className="secondary-admin-button" onClick={() => { setEditingCategory(c.id); setEditingCategoryName(c.name); setEditingCategoryDescription(c.description); }}>Edit</button><button className="danger-admin-button" disabled={busy || products.some(p => p.categoryId === c.id)} title={products.some(p => p.categoryId === c.id) ? 'Move products out of this category first' : 'Delete category'} onClick={async () => { if (!window.confirm('Delete category ' + c.name + '?')) return; setBusy(true); try { await deleteCategory(key, c.id); setMessage('Category deleted.'); await load(key); } catch (e: any) { setError(e?.message || 'Could not delete category.'); } finally { setBusy(false); } }}>Delete</button></div></>}</div>)}</div>
       </section>}
+
+      {tab === 'music' && <section className="admin-dashboard-content"><div className="panel"><h2>Storefront music</h2><p className="panel-intro">Add direct HTTPS links to audio files (such as MP3 or OGG), one URL per line. Most streaming-page URLs are not direct audio files. Browsers may block sound autoplay until the visitor presses Play.</p><form className="admin-form" onSubmit={saveMusic}><label>Song URLs<textarea rows={8} placeholder="https://your-domain.com/music/song-one.mp3&#10;https://your-domain.com/music/song-two.mp3" value={musicTracks} onChange={e => setMusicTracks(e.target.value)}/><small>Up to 30 songs. Use audio files you own or are licensed to play.</small></label><label className="admin-checkbox-label"><input type="checkbox" checked={musicEnabled} onChange={e => setMusicEnabled(e.target.checked)}/> Enable music on the storefront</label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save music settings'}</button></form><div className="admin-music-preview"><b>Current playlist</b><p>{musicTracks.split(/\\r?\\n/).filter(line => line.trim()).length} track(s) · {musicEnabled ? 'Enabled' : 'Disabled'}</p></div></div></section>}
 
       {(tab === 'orders' || tab === 'cancelled') && <section className="admin-dashboard-content"><div className="panel"><div className="admin-panel-heading"><div><h2>{tab === 'cancelled' ? 'Cancelled orders' : 'Order management'}</h2><p className="panel-intro">{tab === 'cancelled' ? 'A dedicated record of cancelled orders. You can restore an order by changing its status.' : 'Review customer details, delivery addresses, items and update each order status.'}</p></div><button className="secondary-admin-button" disabled={busy} onClick={() => void load(key)}>Refresh</button></div><div className="admin-filters"><input aria-label="Search orders" placeholder="Search order number, customer, phone…" value={orderSearch} onChange={e => setOrderSearch(e.target.value)}/>{tab === 'orders' && <select aria-label="Filter order status" value={orderStatus} onChange={e => setOrderStatus(e.target.value)}><option value="ALL">All statuses</option>{orderStatuses.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select>}</div>{tab === 'cancelled' ? orderList(filteredOrders.filter(o => o.status === 'CANCELLED')) : orderList(filteredOrders)}</div></section>}
     </>}
