@@ -12,7 +12,7 @@ export default function PaymentSuccessClient({ order }: { order: string }) {
       .then(response => response.json())
       .then(data => {
         if (!active) return;
-        if (data.paid) { setState('paid'); setNumber(data.orderNumber || number); }
+        if (data.paid) { setState('paid'); setNumber(data.orderNumber || number); localStorage.removeItem('freshcart-cart'); localStorage.removeItem('freshcart-pending-order'); }
         else setState('unconfirmed');
       })
       .catch(() => { if (active) setState('unconfirmed'); });
@@ -22,7 +22,7 @@ export default function PaymentSuccessClient({ order }: { order: string }) {
     setState('checking');
     fetch('/api/payment/verify?order=' + encodeURIComponent(order), { cache: 'no-store' })
       .then(r => r.json()).then(data => {
-        if (data.paid) { setState('paid'); setNumber(data.orderNumber || number); }
+        if (data.paid) { setState('paid'); setNumber(data.orderNumber || number); localStorage.removeItem('freshcart-cart'); localStorage.removeItem('freshcart-pending-order'); }
         else setState('unconfirmed');
       }).catch(() => setState('unconfirmed'));
   };
