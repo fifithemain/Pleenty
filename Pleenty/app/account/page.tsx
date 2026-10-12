@@ -33,6 +33,12 @@ export default function AccountPage() {
   useEffect(() => {
     try {
       const supabase = createBrowserSupabaseClient();
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setUser({ id: session.user.id, email: session.user.email || '' });
+          void loadOrders(session.access_token).catch(e => setError(e instanceof Error ? e.message : 'Could not load orders.'));
+        }
+      });
       supabase.auth.getSession().then(async ({ data }) => {
         const current = data.session;
         if (!current?.user) return;
@@ -40,6 +46,7 @@ export default function AccountPage() {
         try { await loadOrders(current.access_token); } catch (e) { setError(e instanceof Error ? e.message : 'Could not load orders.'); }
       });
     } catch (e) { setError(e instanceof Error ? e.message : 'Accounts are not configured.'); }
+      return () => listener.subscription.unsubscribe();
   }, [loadOrders]);
 
   const submit = async (event: React.FormEvent) => {
@@ -53,7 +60,8 @@ export default function AccountPage() {
         });
         if (authError) throw authError;
         if (!data.session) {
-          setMessage('Account created. Check your email to confirm your address, then sign in.');
+          setMode('signin');
+          setMessage('Account created. Please check your inbox (and spam folder) for a confirmation link. After confirming, sign in here.');
         } else {
           setUser({ id: data.user!.id, email: data.user!.email || email });
           await loadOrders(data.session.access_token);
