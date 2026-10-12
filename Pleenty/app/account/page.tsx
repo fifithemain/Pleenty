@@ -31,14 +31,19 @@ export default function AccountPage() {
   }, []);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
     try {
       const supabase = createBrowserSupabaseClient();
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           setUser({ id: session.user.id, email: session.user.email || '' });
           void loadOrders(session.access_token).catch(e => setError(e instanceof Error ? e.message : 'Could not load orders.'));
+        } else {
+          setUser(null);
+          setOrders([]);
         }
       });
+      unsubscribe = () => listener.subscription.unsubscribe();
       supabase.auth.getSession().then(async ({ data }) => {
         const current = data.session;
         if (!current?.user) return;
@@ -46,7 +51,7 @@ export default function AccountPage() {
         try { await loadOrders(current.access_token); } catch (e) { setError(e instanceof Error ? e.message : 'Could not load orders.'); }
       });
     } catch (e) { setError(e instanceof Error ? e.message : 'Accounts are not configured.'); }
-      return () => listener.subscription.unsubscribe();
+    return () => unsubscribe?.();
   }, [loadOrders]);
 
   const submit = async (event: React.FormEvent) => {
