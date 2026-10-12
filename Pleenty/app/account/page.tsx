@@ -64,11 +64,19 @@ export default function AccountPage() {
           options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin + '/account' },
         });
         if (authError) throw authError;
+        const welcomeResponse = await fetch('/api/email/welcome', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: data.user?.email || email, name: name.trim() }),
+        });
+        const welcomeFailed = !welcomeResponse.ok;
         if (!data.session) {
           setMode('signin');
-          setMessage('Account created. Please check your inbox (and spam folder) for a confirmation link. After confirming, sign in here.');
+          setMessage(welcomeFailed
+            ? 'Account created. Check your inbox for confirmation. The welcome email could not be sent yet; please contact support if it does not arrive.'
+            : 'Account created. Check your inbox (and spam folder) for a confirmation link and welcome email. After confirming, sign in here.');
         } else {
           setUser({ id: data.user!.id, email: data.user!.email || email });
+          setMessage(welcomeFailed ? 'You are signed in, but the welcome email could not be sent yet.' : 'Welcome to People\'s Market!');
           await loadOrders(data.session.access_token);
         }
       } else {
