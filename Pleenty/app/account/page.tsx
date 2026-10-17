@@ -18,6 +18,7 @@ export default function AccountPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -35,6 +36,7 @@ export default function AccountPage() {
     try {
       const supabase = createBrowserSupabaseClient();
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        setAuthLoading(false);
         if (session?.user) {
           setUser({ id: session.user.id, email: session.user.email || '' });
           void loadOrders(session.access_token).catch(e => setError(e instanceof Error ? e.message : 'Could not load orders.'));
@@ -46,11 +48,13 @@ export default function AccountPage() {
       unsubscribe = () => listener.subscription.unsubscribe();
       supabase.auth.getSession().then(async ({ data }) => {
         const current = data.session;
+        setAuthLoading(false);
         if (!current?.user) return;
         setUser({ id: current.user.id, email: current.user.email || '' });
         try { await loadOrders(current.access_token); } catch (e) { setError(e instanceof Error ? e.message : 'Could not load orders.'); }
-      });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Accounts are not configured.'); }
+      }).catch(e => setError(e instanceof Error ? e.message : 'Could not restore your account session.'))
+        .finally(() => setAuthLoading(false));
+    } catch (e) { setError(e instanceof Error ? e.message : 'Accounts are not configured.'); setAuthLoading(false); }
     return () => unsubscribe?.();
   }, [loadOrders]);
 
@@ -94,6 +98,8 @@ export default function AccountPage() {
   const signOut = async () => {
     try { const supabase = createBrowserSupabaseClient(); await supabase.auth.signOut(); } finally { setUser(null); setOrders([]); setMessage('You have signed out.'); }
   };
+
+  if (authLoading) return <main className="account-shell"><section className="account-auth-card"><span className="account-kicker">YOUR PEOPLE'S MARKET ACCOUNT</span><p>Checking your sign-in session…</p></section></main>;
 
   if (!user) return <main className="account-shell">
     <Link href="/" className="account-back">← Back to People's Market</Link>

@@ -27,10 +27,11 @@ export async function createYocoCheckout(input: {
   orderId: string;
   amountRands: number;
   customerEmail?: string;
+  siteUrl?: string;
 }) {
   const secret = requireYocoSecret();
   const amount = Math.round(input.amountRands * 100);
-  const siteUrl = getSiteUrl();
+  const siteUrl = input.siteUrl || getSiteUrl();
   const response = await fetch(YOCO_API_URL + '/checkouts', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + secret, 'Content-Type': 'application/json' },

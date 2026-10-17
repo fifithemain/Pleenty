@@ -1,5 +1,6 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createYocoCheckout } from '@/lib/yoco';
 import { getAuthenticatedUser } from '@/lib/auth-user';
@@ -69,7 +70,9 @@ export async function createCheckoutOrder(input: CheckoutInput, accessToken?: st
   });
 
   try {
-    const checkout = await createYocoCheckout({ orderId: order.id, amountRands: totalAmount, customerEmail: email });
+    const origin = headers().get('origin');
+    const siteUrl = origin ? new URL(origin).origin : undefined;
+    const checkout = await createYocoCheckout({ orderId: order.id, amountRands: totalAmount, customerEmail: email, siteUrl });
     await prisma.order.update({ where: { id: order.id }, data: { yocoCheckoutId: checkout.id } });
     return {
       success: true as const,
