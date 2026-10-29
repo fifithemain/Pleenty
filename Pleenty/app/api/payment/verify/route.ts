@@ -10,6 +10,10 @@ export async function GET(request: NextRequest) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
   if (['paid', 'succeeded', 'completed'].includes(order.paymentStatus.toLowerCase())) {
+    if (['pending', 'confirmed'].includes(order.status.toLowerCase())) {
+      await prisma.order.update({ where: { id: order.id }, data: { status: 'preparing' } });
+      return NextResponse.json({ paid: true, orderNumber: order.id.slice(0, 8).toUpperCase(), status: 'preparing' });
+    }
     return NextResponse.json({ paid: true, orderNumber: order.id.slice(0, 8).toUpperCase(), status: order.status });
   }
   if (!order.yocoCheckoutId) return NextResponse.json({ paid: false, status: order.status, paymentStatus: order.paymentStatus });
@@ -18,8 +22,8 @@ export async function GET(request: NextRequest) {
     const state = String(checkout.status || '').toLowerCase();
     const paid = ['completed', 'succeeded', 'paid'].includes(state);
     if (paid) {
-      await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'paid', status: 'confirmed' } });
-      return NextResponse.json({ paid: true, orderNumber: order.id.slice(0, 8).toUpperCase(), status: 'confirmed' });
+      await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'paid',       status: 'preparing' } });
+            return NextResponse.json({ paid: true, orderNumber: order.id.slice(0, 8).toUpperCase(), status: 'preparing' });
     }
     return NextResponse.json({ paid: false, status: order.status, paymentStatus: order.paymentStatus, providerStatus: state });
   } catch {
