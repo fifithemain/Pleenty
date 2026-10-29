@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createCategory, createProduct, deleteCategory, deleteProduct, getAdminDashboardData,
-  renameCategory, updateOrderStatus, updateProduct, saveMusicSettings,
+  renameCategory, updateOrderStatus, updateProduct, saveMusicSettings, saveDeliveryZones,
 } from '../actions/admin';
+import type { DeliveryZone } from '@/lib/delivery-pricing';
 
 type Category = { id: string; name: string; slug: string; description: string; isActive: boolean };
 type Product = { id: string; name: string; slug: string; description: string; price: number; imageUrl: string; stockQty: number; inStock: boolean; categoryId: string; categoryName: string };
 type OrderItem = { quantity: number; price: number; name: string };
 type Order = { id: string; orderNumber: string; customerName: string; customerPhone: string; deliveryAddress: string; totalAmount: number; status: string; paymentStatus: string; createdAt: string; items: OrderItem[] };
-type Tab = 'overview' | 'products' | 'categories' | 'music' | 'orders' | 'cancelled';
+type Tab = 'overview' | 'products' | 'categories' | 'delivery' | 'music' | 'orders' | 'cancelled';
 const money = (n: number) => new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(n);
 const orderStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'] as const;
 
@@ -20,6 +21,7 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [tab, setTab] = useState<Tab>('overview');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -47,6 +49,7 @@ export default function Admin() {
       setProducts(data.products as Product[]);
       setCategories(data.categories as Category[]);
       setOrders(data.orders as Order[]);
+      setDeliveryZones(data.deliveryZones);
       setMusicTracks(Array.isArray(data.music?.tracks) ? data.music.tracks.join('\n') : '');
       setMusicEnabled(Boolean(data.music?.enabled));
       setUnlocked(true);
@@ -179,13 +182,34 @@ export default function Admin() {
     finally { setBusy(false); }
   };
 
+  const saveDeliveryAreas = async () => {
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const result = await saveDeliveryZones(key, deliveryZones);
+      setDeliveryZones(result);
+      setMessage('Delivery areas saved.');
+    } catch (e: any) { setError(e?.message || 'Could not save delivery areas.'); }
+    finally { setBusy(false); }
+  };
+
+  const updateDeliveryZone = (id: string, update: Partial<DeliveryZone>) => {
+    setDeliveryZones(current => current.map(zone => zone.id === id ? { ...zone, ...update } : zone));
+  };
+
+  const addDeliveryZone = () => {
+    setDeliveryZones(current => [...current, {
+      id: crypto.randomUUID(), city: '', province: '', latitude: -31.5889, longitude: 28.7844,
+      maxRoadDistanceKm: 25, enabled: true,
+    }]);
+  };
+
   const orderList = (source: Order[]) => source.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Order</th><th>Customer & delivery</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Update status</th></tr></thead><tbody>{source.map(o => <tr key={o.id}><td><b>{o.orderNumber}</b><small>{new Date(o.createdAt).toLocaleString('en-ZA')}</small></td><td><b>{o.customerName}</b><small>{o.customerPhone}</small><small>{o.deliveryAddress}</small></td><td>{o.items.map(i => i.quantity + ' × ' + i.name).join(', ') || 'No item details'}</td><td><b>{money(o.totalAmount)}</b></td><td><span className={'order-status status-' + o.paymentStatus.toLowerCase()}>{o.paymentStatus.replaceAll('_', ' ')}</span></td><td><span className={'order-status status-' + o.status.toLowerCase()}>{o.status.replaceAll('_', ' ')}</span></td><td><select aria-label={'Status for order ' + o.orderNumber} value={o.status} disabled={busy} onChange={e => void changeOrderStatus(o, e.target.value)}>{orderStatuses.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select></td></tr>)}</tbody></table></div> : <div className="admin-empty"><b>{tab === 'cancelled' ? 'No cancelled orders' : 'No orders found'}</b><p>{tab === 'cancelled' ? 'Orders you cancel will be listed here for easy reference.' : 'New customer orders will appear here.'}</p></div>;
 
   return <main className="admin-shell">
     <header className="admin-header"><div><b>FreshCart Admin</b><span>Store management · Products, categories & orders</span></div>{unlocked && <button onClick={() => { localStorage.removeItem('freshcart-admin-key'); setKey(''); setUnlocked(false); setProducts([]); setCategories([]); setOrders([]); setMessage(''); setError(''); }}>Sign out</button>}</header>
     {!unlocked ? <section className="admin-login"><h1>Admin access</h1><p>Sign in with your private admin access key to manage the FreshCart catalogue and orders.</p><form onSubmit={e => { e.preventDefault(); void load(key); }}><label>Admin access key<input type="password" autoComplete="current-password" value={key} onChange={e => setKey(e.target.value)} placeholder="Enter your admin access key" required /></label><button type="submit" disabled={busy}>{busy ? 'Loading dashboard…' : 'Open dashboard'}</button></form>{error && <p className="admin-error">{error}</p>}</section> : <>
       <nav className="admin-nav">
-        {([['overview','Overview'],['products','Products'],['categories','Categories'],['music','Storefront music'],['orders','All orders'],['cancelled','Cancelled orders']] as [Tab,string][]).map(([id,label]) => <button key={id} className={tab === id ? 'selected' : ''} onClick={() => setTab(id)}>{label}{id === 'products' ? ' (' + products.length + ')' : id === 'categories' ? ' (' + categories.length + ')' : id === 'orders' ? ' (' + orders.length + ')' : id === 'cancelled' ? ' (' + cancelledOrders.length + ')' : ''}</button>)}
+        {([['overview','Overview'],['products','Products'],['categories','Categories'],['delivery','Delivery areas'],['music','Storefront music'],['orders','All orders'],['cancelled','Cancelled orders']] as [Tab,string][]).map(([id,label]) => <button key={id} className={tab === id ? 'selected' : ''} onClick={() => setTab(id)}>{label}{id === 'products' ? ' (' + products.length + ')' : id === 'categories' ? ' (' + categories.length + ')' : id === 'orders' ? ' (' + orders.length + ')' : id === 'cancelled' ? ' (' + cancelledOrders.length + ')' : ''}</button>)}
         <button className="admin-refresh" disabled={busy} onClick={() => void load(key)}>{busy ? 'Refreshing…' : '↻ Refresh data'}</button>
       </nav>
       {message && <div className="admin-message" role="status">{message}</div>}
@@ -226,6 +250,23 @@ export default function Admin() {
       {tab === 'categories' && <section className="admin-dashboard-content">
         <div className="panel"><h2>Create a category</h2><p className="panel-intro">Categories organise the live shop, for example Produce, Pantry, Dairy or Household.</p><form className="admin-form" onSubmit={addCategory}><label>Category name<input required placeholder="e.g. Fruit & Vegetables" value={categoryName} onChange={e => setCategoryName(e.target.value)}/></label><label>Description (optional)<textarea placeholder="What belongs in this category?" value={categoryDescription} onChange={e => setCategoryDescription(e.target.value)}/></label><button disabled={busy} type="submit">{busy ? 'Saving…' : 'Create category'}</button></form></div>
         <div className="panel"><h2>Shop categories</h2><p className="panel-intro">Rename categories or see how many products are assigned to each one.</p>{categories.map(c => <div className="category-admin-row" key={c.id}>{editingCategory === c.id ? <div className="category-edit-fields"><input aria-label="Category name" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} placeholder="Category name"/><input aria-label="Category description" value={editingCategoryDescription} onChange={e => setEditingCategoryDescription(e.target.value)} placeholder="Description (optional)"/><div><button disabled={busy} onClick={() => void saveCategory(c.id)}>Save</button><button className="secondary-admin-button" onClick={() => setEditingCategory(null)}>Cancel</button></div></div> : <><div><b>{c.name}</b><small>/{c.slug} · {products.filter(p => p.categoryId === c.id).length} products</small>{c.description && <p>{c.description}</p>}</div><div className="category-row-actions"><button className="secondary-admin-button" onClick={() => { setEditingCategory(c.id); setEditingCategoryName(c.name); setEditingCategoryDescription(c.description); }}>Edit</button><button className="danger-admin-button" disabled={busy || products.some(p => p.categoryId === c.id)} title={products.some(p => p.categoryId === c.id) ? 'Move products out of this category first' : 'Delete category'} onClick={async () => { if (!window.confirm('Delete category ' + c.name + '?')) return; setBusy(true); try { await deleteCategory(key, c.id); setMessage('Category deleted.'); await load(key); } catch (e: any) { setError(e?.message || 'Could not delete category.'); } finally { setBusy(false); } }}>Delete</button></div></>}</div>)}</div>
+      </section>}
+
+      {tab === 'delivery' && <section className="admin-dashboard-content">
+        <div className="panel">
+          <h2>Delivery areas</h2>
+          <p className="panel-intro">Only enabled areas accept orders. Distances are measured by driving route from each area’s reference point. The initial Mthatha CBD coordinate is approximate, not a shop address.</p>
+          <div className="admin-product-list">{deliveryZones.map(zone => <article className="admin-product-card" key={zone.id}>
+            <label>City<input required maxLength={100} value={zone.city} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { city: e.target.value })}/></label>
+            <label>Province<input required maxLength={100} value={zone.province} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { province: e.target.value })}/></label>
+            <label>Center latitude<input required type="number" min="-90" max="90" step="any" value={zone.latitude} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { latitude: Number(e.target.value) })}/></label>
+            <label>Center longitude<input required type="number" min="-180" max="180" step="any" value={zone.longitude} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { longitude: Number(e.target.value) })}/></label>
+            <label>Maximum road distance (km)<input required type="number" min="1" max="500" step="1" value={zone.maxRoadDistanceKm} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { maxRoadDistanceKm: Number(e.target.value) })}/></label>
+            <label className="admin-checkbox-label"><input type="checkbox" checked={zone.enabled} disabled={busy} onChange={e => updateDeliveryZone(zone.id, { enabled: e.target.checked })}/> Enabled</label>
+            <button type="button" className="danger-admin-button" disabled={busy} onClick={() => setDeliveryZones(current => current.filter(item => item.id !== zone.id))}>Remove area</button>
+          </article>)}</div>
+          <div className="admin-quick-links"><button type="button" disabled={busy} onClick={addDeliveryZone}>＋ Add city / province</button><button type="button" disabled={busy} onClick={() => void saveDeliveryAreas()}>{busy ? 'Saving…' : 'Save delivery areas'}</button></div>
+        </div>
       </section>}
 
       {tab === 'music' && <section className="admin-dashboard-content"><div className="panel"><h2>Storefront music</h2><p className="panel-intro">Add direct HTTPS links to audio files (such as MP3 or OGG), one URL per line. Most streaming-page URLs are not direct audio files. Browsers may block sound autoplay until the visitor presses Play.</p><form className="admin-form" onSubmit={saveMusic}><label>Upload song files<input type="file" accept="audio/*,.mp3,.ogg,.wav,.m4a,.aac,.webm" multiple disabled={uploadingMusic || busy} onChange={e => { void uploadMusicFiles(e.currentTarget.files); e.currentTarget.value = ''; }}/><small>Choose MP3, OGG, WAV, M4A, AAC or WEBM files. Maximum 15 MB per song. Uploaded songs are stored in FreshCart’s music library.</small></label><label>Or add direct song URLs<textarea rows={5} placeholder="https://your-domain.com/music/song-one.mp3&#10;https://your-domain.com/music/song-two.mp3" value={musicTracks} onChange={e => setMusicTracks(e.target.value)}/><small>Up to 30 songs total. Use audio files you own or are licensed to play.</small></label>{uploadingMusic && <p className="admin-message">Uploading songs… please keep this page open.</p>}<label className="admin-checkbox-label"><input type="checkbox" checked={musicEnabled} onChange={e => setMusicEnabled(e.target.checked)}/> Enable music on the storefront</label><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save music settings'}</button></form><div className="admin-music-preview"><b>Current playlist</b><p>{musicTracks.split(/\r?\n/).filter(line => line.trim()).length} track(s) · {musicEnabled ? 'Enabled' : 'Disabled'}</p></div></div></section>}

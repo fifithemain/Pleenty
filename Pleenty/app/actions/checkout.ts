@@ -4,6 +4,9 @@ import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createYocoCheckout } from '@/lib/yoco';
 import { getAuthenticatedUser } from '@/lib/auth-user';
+import { calculateDeliveryFee, DEFAULT_DELIVERY_ZONES, validateDeliveryZones } from '@/lib/delivery-pricing';
+import type { DeliveryZone } from '@/lib/delivery-pricing';
+import { DeliveryAddressError, getDeliveryRoadDistance } from '@/lib/google-maps-delivery';
 
 type CheckoutInput = {
   customerName: string;
@@ -51,7 +54,24 @@ export async function createCheckoutOrder(input: CheckoutInput, accessToken?: st
     return { productId: product.id, productName: product.name, quantity, price, lineTotal: price * quantity };
   });
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-  const deliveryFee = subtotal >= 350 ? 0 : 35;
+  let deliveryZones: DeliveryZone[];
+  try {
+    const setting = await prisma.appSetting.findUnique({ where: { key: 'delivery_zones' } });
+    deliveryZones = setting ? validateDeliveryZones(setting.value) : DEFAULT_DELIVERY_ZONES;
+  } catch (error) {
+    console.error('FreshCart delivery area settings could not be loaded:', error);
+    return { success: false as const, error: 'Delivery coverage settings could not be loaded. Please try again later.' };
+  }
+  let deliveryRoute: Awaited<ReturnType<typeof getDeliveryRoadDistance>>;
+  try {
+    deliveryRoute = await getDeliveryRoadDistance(input.deliveryAddress.trim(), deliveryZones);
+  } catch (error) {
+    const message = error instanceof DeliveryAddressError
+      ? error.message
+      : 'We could not verify the delivery address right now. Please try again shortly.';
+    return { success: false as const, error: message };
+  }
+  const deliveryFee = calculateDeliveryFee(subtotal, deliveryRoute.distanceKm);
   const totalAmount = subtotal + deliveryFee;
   if (totalAmount < 2) return { success: false as const, error: 'Yoco payments require a minimum payment of R2.00.' };
 
@@ -62,7 +82,11 @@ export async function createCheckoutOrder(input: CheckoutInput, accessToken?: st
       customerName: input.customerName.trim(),
       customerPhone: input.customerPhone.trim(),
       customerEmail: email,
-      deliveryAddress: { line1: input.deliveryAddress.trim() },
+      deliveryAddress: {
+        line1: input.deliveryAddress.trim(),
+        deliveryZone: `${deliveryRoute.zone.city}, ${deliveryRoute.zone.province}`,
+        roadDistanceKm: Math.round(deliveryRoute.distanceKm * 10) / 10,
+      },
       deliveryNotes: input.deliveryNotes?.trim() || undefined,
       subtotal, deliveryFee, totalAmount, status: 'pending', paymentStatus: 'unpaid',
       items: { create: lines },

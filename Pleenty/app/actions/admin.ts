@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { DEFAULT_DELIVERY_ZONES, validateDeliveryZones } from '@/lib/delivery-pricing';
 
 function checkKey(key: string) {
   if (!process.env.ADMIN_ACCESS_KEY || key !== process.env.ADMIN_ACCESS_KEY) {
@@ -11,11 +12,12 @@ function checkKey(key: string) {
 
 export async function getAdminDashboardData(key: string) {
   checkKey(key);
-  const [products, categories, orders, musicSetting] = await Promise.all([
+  const [products, categories, orders, musicSetting, deliverySetting] = await Promise.all([
     prisma.product.findMany({ include: { category: true }, orderBy: { name: 'asc' } }),
     prisma.category.findMany({ orderBy: { name: 'asc' } }),
     prisma.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 250 }),
     prisma.appSetting.findUnique({ where: { key: 'storefront_music' } }),
+    prisma.appSetting.findUnique({ where: { key: 'delivery_zones' } }),
   ]);
   return {
     products: products.map(p => ({
@@ -26,6 +28,7 @@ export async function getAdminDashboardData(key: string) {
     })),
     categories: categories.map(c => ({ id: c.id, name: c.name, slug: c.slug, description: c.description || '', isActive: c.isActive })),
     music: (musicSetting?.value as { enabled?: boolean; tracks?: string[] } | null) || { enabled: false, tracks: [] },
+    deliveryZones: deliverySetting ? validateDeliveryZones(deliverySetting.value) : DEFAULT_DELIVERY_ZONES,
     orders: orders.map(o => ({
       id: o.id, orderNumber: o.id.slice(0, 8).toUpperCase(), customerName: o.customerName,
       customerPhone: o.customerPhone, deliveryAddress: typeof o.deliveryAddress === 'object' && o.deliveryAddress !== null
@@ -125,6 +128,18 @@ export async function saveMusicSettings(key: string, tracks: string[], enabled: 
     update: { value },
   });
   revalidatePath('/');
+  revalidatePath('/admin');
+  return value;
+}
+
+export async function saveDeliveryZones(key: string, zones: unknown) {
+  checkKey(key);
+  const value = validateDeliveryZones(zones);
+  await prisma.appSetting.upsert({
+    where: { key: 'delivery_zones' },
+    create: { key: 'delivery_zones', value },
+    update: { value },
+  });
   revalidatePath('/admin');
   return value;
 }

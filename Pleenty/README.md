@@ -15,9 +15,12 @@ Copy `.env.example` to `.env.local` for local development, then configure the sa
 
 - `DATABASE_URL`: Supabase PostgreSQL connection URI (include the database password; use the connection details shown in Supabase Project Settings → Database).
 - `ADMIN_ACCESS_KEY`: a long, random secret used by the MVP admin gate.
+- `GOOGLE_MAPS_API_KEY`: a server-only Google Maps Platform key with the Geocoding API and Routes API enabled. Checkout geocodes the submitted address and uses driving-route distance to check coverage and calculate delivery.
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`: reserved for the Supabase client integration.
 
 Do not commit real environment values or expose database passwords/service-role keys in browser code. The current Vercel project has no environment variables configured, so database-backed catalogue, admin, and checkout features will not work until these are added.
+
+Restrict the Google Maps key to the Geocoding API and Routes API, keep it server-side (never use a `NEXT_PUBLIC_` variable), and configure the key and billing in Google Cloud before accepting orders. In `/admin` → **Delivery areas**, manage enabled cities and provinces, their reference coordinates, and their maximum driving distance. The initial Mthatha / Eastern Cape reference point is an approximate CBD coordinate, not the shop address. Delivery is R45 for the first 8 road kilometres and R5 per additional kilometre (rounded up); orders of R500 or more receive free delivery. Addresses outside enabled coverage are rejected before an order is created.
 
 ## Database
 
@@ -44,5 +47,5 @@ Open `/admin` and enter the value configured as `ADMIN_ACCESS_KEY`. This is an M
 ## Known MVP limits
 
 - Storefront display data is currently a curated static list; the checkout validates product slugs and prices against the database.
-- Payment-provider integration, live courier tracking, notifications, and delivery maps are not implemented.
+- Live courier tracking, notifications, and customer-facing delivery maps are not implemented.
 - Do not accept real payments or rely on the demo tracking timeline until those integrations are completed and tested.
